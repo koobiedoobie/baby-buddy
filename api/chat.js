@@ -1,10 +1,12 @@
-const fetch = require("node-fetch");
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
 
-module.exports = async function handler(req, res) {
   const { message } = req.body;
 
   if (!message) {
-    return res.status(400).json({ error: "No message provided" });
+    return res.status(400).json({ error: "Missing message in request body" });
   }
 
   try {
@@ -19,22 +21,24 @@ module.exports = async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are Baby Buddy 👶 — a calm, warm, parenting expert helping new parents.",
+            content:
+              "You are Baby Buddy 👶 — a calm, evidence-based expert helping new parents. Always respond with empathy and based on baby age if mentioned.",
           },
-          { role: "user", content: message },
+          {
+            role: "user",
+            content: message,
+          },
         ],
       }),
     });
 
     const data = await response.json();
 
-    if (data.choices && data.choices.length > 0) {
-      res.status(200).json({ reply: data.choices[0].message.content });
-    } else {
-      res.status(500).json({ error: "Invalid OpenAI response", raw: data });
+    if (!data || !data.choices || !data.choices[0]?.message?.content) {
+      console.error("Invalid OpenAI response:", data);
+      return res.status(500).json({ error: "Invalid OpenAI response", data });
     }
+
+    return res.status(200).json({ reply: data.choices[0].message.content });
   } catch (err) {
-    console.error("OpenAI error:", err);
-    res.status(500).json({ error: "Something went wrong", details: err.message });
-  }
-};
+    console
