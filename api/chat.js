@@ -1,21 +1,17 @@
 export default async function handler(req, res) {
-  console.log("👀 API ROUTE HIT");
-
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
   const { message } = req.body;
-
   const key = process.env.OPENAI_API_KEY;
-  console.log("🔑 Key length:", key ? key.length : "NOT FOUND");
 
   if (!key) {
-    return res.status(500).json({ error: "OPENAI_API_KEY not found in environment variables" });
+    return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
-  if (!message) {
-    return res.status(400).json({ error: "Missing message in request body" });
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "Message is required and must be a string" });
   }
 
   try {
@@ -31,12 +27,9 @@ export default async function handler(req, res) {
           {
             role: "system",
             content:
-              "You are Baby Buddy 👶 — a calm, evidence-based expert helping new parents. Always respond with empathy and based on baby age if mentioned.",
+              "You are Baby Buddy 👶 — a warm, calm, expert that helps new parents with evidence-based advice. Respond with empathy and based on baby age if relevant.",
           },
-          {
-            role: "user",
-            content: message,
-          },
+          { role: "user", content: message },
         ],
       }),
     });
@@ -44,13 +37,11 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!data || !data.choices || !data.choices[0]?.message?.content) {
-      console.error("❌ Invalid OpenAI response:", data);
-      return res.status(500).json({ error: "Invalid OpenAI response", data });
+      return res.status(500).json({ error: "Invalid response from OpenAI", data });
     }
 
     return res.status(200).json({ reply: data.choices[0].message.content });
   } catch (err) {
-    console.error("🔥 Caught error:", err);
-    return res.status(500).json({ error: "Caught server error", details: err.message });
+    return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
 }
