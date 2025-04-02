@@ -25,7 +25,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4-1106-preview", // ✅ Correct model
+        model: "gpt-3.5-turbo", // ✅ Works with free/test OpenAI keys
         messages: [
           {
             role: "system",
