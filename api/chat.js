@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
-  const { message } = req.body;
+  const { messages } = req.body;
   const key = process.env.OPENAI_API_KEY;
 
   if (!key) {
@@ -13,8 +13,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
-  if (!message || typeof message !== "string") {
-    return res.status(400).json({ error: "Message is required and must be a string" });
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: "Messages is required and must be an array" });
   }
 
   try {
@@ -25,18 +25,8 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo", // ✅ Works with free/test OpenAI keys
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are Baby Buddy 👶 — a calm, warm, evidence-based expert helping new parents. Always tailor your answers to the baby's age if mentioned.",
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
+        model: "gpt-3.5-turbo",
+        messages: messages,
       }),
     });
 
