@@ -17,7 +17,6 @@ export default async function handler(req, res) {
   let finalMessages = [];
 
   if (type === "tip") {
-    // Use a specific system + user prompt for daily tips
     finalMessages = [
       {
         role: "system",
@@ -29,7 +28,6 @@ export default async function handler(req, res) {
       },
     ];
   } else {
-    // Default: regular chat flow
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages is required and must be an array" });
     }
