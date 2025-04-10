@@ -6,17 +6,19 @@ export default async function handler(req, res) {
   }
 
   const { messages, type, babyName, birthdate, gender } = req.body;
-  const key = process.env.OPENAI_API_KEY;
+  const key = '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';  // Your API key
 
   if (!key) {
     console.error("❌ Missing OpenAI API key in environment variables");
     return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
-  // 🧠 If request is for a daily tip instead of regular chat
   let finalMessages = [];
 
   if (type === "tip") {
+    // Calculate baby's age
+    const babyAge = calculateAge(birthdate);
+
     // Use a specific tip-oriented system + user prompt
     finalMessages = [
       {
@@ -28,11 +30,10 @@ export default async function handler(req, res) {
         role: "user",
         content: `The baby's name is ${babyName}. ${
           gender ? `They are a ${gender}.` : ""
-        } They were born on ${birthdate}. Please provide today's parenting tip or encouragement.`,
+        } They were born on ${birthdate}. They are ${babyAge} years old. Please provide today's parenting tip or encouragement based on their developmental stage.`,
       },
     ];
   } else {
-    // Default: regular chat flow
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages is required and must be an array" });
     }
@@ -73,4 +74,18 @@ export default async function handler(req, res) {
     console.error("🔥 Error from OpenAI API:", err);
     return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
+}
+
+// Helper function to calculate the age of the baby based on birthdate
+function calculateAge(birthdate) {
+  const birthDate = new Date(birthdate);
+  const currentDate = new Date();
+  let age = currentDate.getFullYear() - birthDate.getFullYear();
+  const month = currentDate.getMonth() - birthDate.getMonth();
+
+  if (month < 0 || (month === 0 && currentDate.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
 }
