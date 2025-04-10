@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const { messages, type, babyName, birthdate, gender } = req.body;
-  const key = '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';  // Your API key
+  const key = process.env.OPENAI_API_KEY;
 
   if (!key) {
     console.error("❌ Missing OpenAI API key in environment variables");
@@ -17,9 +17,6 @@ export default async function handler(req, res) {
   let finalMessages = [];
 
   if (type === "tip") {
-    // Calculate baby's age
-    const babyAge = calculateAge(birthdate);
-
     // Use a specific tip-oriented system + user prompt
     finalMessages = [
       {
@@ -29,9 +26,9 @@ export default async function handler(req, res) {
       },
       {
         role: "user",
-        content: `The baby's name is ${babyName}. ${
-          gender ? `They are a ${gender}.` : ""
-        } They were born on ${birthdate}. They are ${babyAge} years old. Please provide today's parenting tip or encouragement based on their developmental stage.`,
+        content: The baby's name is ${babyName}. ${
+          gender ? They are a ${gender}. : ""
+        } They were born on ${birthdate}. Please provide today's parenting tip or encouragement.,
       },
     ];
   } else {
@@ -44,7 +41,7 @@ export default async function handler(req, res) {
 
     finalMessages.unshift({
       role: "system",
-      content: `You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.`,
+      content: You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.,
     });
   }
 
@@ -52,7 +49,7 @@ export default async function handler(req, res) {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${key}`,
+        Authorization: Bearer ${key},
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -76,18 +73,4 @@ export default async function handler(req, res) {
     console.error("🔥 Error from OpenAI API:", err);
     return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
-}
-
-// Helper function to calculate the age of the baby based on birthdate
-function calculateAge(birthdate) {
-  const birthDate = new Date(birthdate);
-  const currentDate = new Date();
-  let age = currentDate.getFullYear() - birthDate.getFullYear();
-  const month = currentDate.getMonth() - birthDate.getMonth();
-
-  if (month < 0 || (month === 0 && currentDate.getDate() < birthDate.getDate())) {
-    age--;
-  }
-
-  return age;
 }
