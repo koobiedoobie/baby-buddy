@@ -1,4 +1,4 @@
-// pages/api/chat.js
+// api/chat.js
 export default async function handler(req, res) {
   console.log("✅ Baby Buddy API called");
 
