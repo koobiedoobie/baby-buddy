@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   const { messages, type, babyName, birthdate, gender } = req.body;
-  const key = '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';  // Your API key
+  const key = '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';  // Your API key
 
   if (!key) {
     console.error("❌ Missing OpenAI API key in environment variables");
