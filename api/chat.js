@@ -1,3 +1,4 @@
+// pages/api/chat.js
 export default async function handler(req, res) {
   console.log("✅ Baby Buddy API called");
 
@@ -13,22 +14,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
-  // 🧠 If request is for a daily tip instead of regular chat
   let finalMessages = [];
 
   if (type === "tip") {
-    // Use a specific tip-oriented system + user prompt
+    // Use a specific system + user prompt for daily tips
     finalMessages = [
       {
         role: "system",
-        content:
-          "You are Baby Buddy, a warm, supportive AI co-parent. Based on the baby's age and background, you give one friendly, age-appropriate tip or encouragement per day. Keep it short, specific, and helpful. Avoid general advice. Do not speak to the baby. Speak kindly to the parent, as a trusted nanny would.",
+        content: `You are Baby Buddy, a warm, supportive AI co-parent. Based on the baby's age and background, you give one friendly, age-appropriate tip or encouragement per day. Keep it short, specific, and helpful. Avoid general advice. Do not speak to the baby. Speak kindly to the parent, as a trusted nanny would.`,
       },
       {
         role: "user",
-        content: The baby's name is ${babyName}. ${
-          gender ? They are a ${gender}. : ""
-        } They were born on ${birthdate}. Please provide today's parenting tip or encouragement.,
+        content: `The baby's name is ${babyName}. ${gender ? `They are a ${gender}.` : ""} They were born on ${birthdate}. Please provide today's parenting tip or encouragement.`,
       },
     ];
   } else {
@@ -37,19 +34,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Messages is required and must be an array" });
     }
 
-    finalMessages = [...messages];
-
-    finalMessages.unshift({
-      role: "system",
-      content: You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.,
-    });
+    finalMessages = [
+      {
+        role: "system",
+        content: `You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.`,
+      },
+      ...messages,
+    ];
   }
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: Bearer ${key},
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
