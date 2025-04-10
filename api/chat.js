@@ -13,6 +13,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
+  // 🧠 If request is for a daily tip instead of regular chat
   let finalMessages = [];
 
   if (type === "tip") {
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
       },
     ];
   } else {
+    // Default: regular chat flow
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages is required and must be an array" });
     }
