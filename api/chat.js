@@ -1,5 +1,6 @@
-// pages/api/chat.js
 export default async function handler(req, res) {
+  console.log("✅ Baby Buddy API called");
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
@@ -8,13 +9,14 @@ export default async function handler(req, res) {
   const key = process.env.OPENAI_API_KEY;
 
   if (!key) {
-    console.error("❌ Missing OpenAI API key");
+    console.error("❌ Missing OpenAI API key in environment variables");
     return res.status(500).json({ error: "Missing OpenAI API key" });
   }
 
   let finalMessages = [];
 
   if (type === "tip") {
+    // 🎯 Daily tip mode
     finalMessages = [
       {
         role: "system",
@@ -23,24 +25,24 @@ export default async function handler(req, res) {
       },
       {
         role: "user",
-        content: `The baby's name is ${babyName}. ${gender ? `They are a ${gender}.` : ""} They were born on ${birthdate}. Please provide today's parenting tip or encouragement.`,
+        content: `The baby's name is ${babyName}. ${
+          gender ? `They are a ${gender}. ` : ""
+        }They were born on ${birthdate}. Please provide today's parenting tip or encouragement.`,
       },
     ];
   } else {
+    // 💬 Full chat context
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "Messages must be an array" });
+      return res.status(400).json({ error: "Messages is required and must be an array" });
     }
 
     finalMessages = [
       {
         role: "system",
         content:
-          "You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.",
+          "You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.",
       },
-      ...messages.map((m) => ({
-        role: m.from === 'user' ? 'user' : 'assistant',
-        content: m.text,
-      })),
+      ...messages,
     ];
   }
 
@@ -59,15 +61,17 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    if (!data.choices || !data.choices[0]?.message?.content) {
-      console.error("❌ GPT returned empty or malformed response", data);
-      return res.status(500).json({ error: "Invalid GPT response", data });
+    if (!data || !data.choices || !data.choices[0]?.message?.content) {
+      console.error("❌ Invalid OpenAI response:", data);
+      return res.status(500).json({ error: "Invalid response from OpenAI", data });
     }
 
-    const reply = data.choices[0].message.content;
+    const reply = data.choices[0].message.content.trim();
+    console.log("✅ Reply sent:", reply);
+
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("🔥 GPT API error:", err);
-    return res.status(500).json({ error: "OpenAI request failed", details: err.message });
+    console.error("🔥 Error from OpenAI API:", err);
+    return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
 }
