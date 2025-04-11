@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
-  const { messages, type, babyName, birthdate, gender } = req.body;
+  const { messages, type, babyName, birthdate, gender, ageString } = req.body;
   const key = process.env.OPENAI_API_KEY;
 
   if (!key) {
@@ -16,18 +16,22 @@ export default async function handler(req, res) {
   let finalMessages = [];
 
   if (type === "tip") {
-    // 🎯 Daily tip mode
+    // 🎯 Age-accurate daily tip mode
     finalMessages = [
       {
         role: "system",
-        content:
-          "You are Baby Buddy, a warm, supportive AI co-parent. Based on the baby's age and background, you give one friendly, age-appropriate tip or encouragement per day. Keep it short, specific, and helpful. Avoid general advice. Do not speak to the baby. Speak kindly to the parent, as a trusted nanny would.",
+        content: `You are Babywise, a warm and supportive AI parenting guide.
+You give one developmentally appropriate, actionable, and encouraging tip per day based on the baby's exact age.
+Tips should be realistic and match the real-life needs of parents with babies or toddlers between 0–2 years old.
+Never recommend tummy time for children over 9 months old. Do not address the baby directly.
+Keep the tone kind, warm, and helpful — as if you're a trusted nanny.`,
       },
       {
         role: "user",
-        content: `The baby's name is ${babyName}. ${
-          gender ? `They are a ${gender}. ` : ""
-        }They were born on ${birthdate}. Please provide today's parenting tip or encouragement.`,
+        content: `My baby, ${babyName}, is ${ageString} old. ${
+          gender ? `She is a ${gender}. ` : ""
+        }She was born on ${birthdate}.
+What is one helpful, practical parenting tip or suggestion I can try today that is right for her age? Please respond in 2–3 warm, friendly sentences.`,
       },
     ];
   } else {
@@ -40,7 +44,7 @@ export default async function handler(req, res) {
       {
         role: "system",
         content:
-          "You are Baby Buddy, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.",
+          "You are Babywise, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.",
       },
       ...messages,
     ];
