@@ -1,3 +1,4 @@
+// === ✅ Fixed /api/chat handler ===
 export default async function handler(req, res) {
   console.log("✅ Baby Buddy API called");
 
@@ -16,7 +17,10 @@ export default async function handler(req, res) {
   let finalMessages = [];
 
   if (type === "tip") {
-    // 🎯 Age-accurate daily tip mode
+    if (!babyName || !birthdate || !ageString) {
+      return res.status(400).json({ error: "Missing required baby data for tip request." });
+    }
+
     finalMessages = [
       {
         role: "system",
@@ -35,7 +39,6 @@ What is one helpful, practical parenting tip or suggestion I can try today that 
       },
     ];
   } else {
-    // 💬 Full chat context
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages is required and must be an array" });
     }
