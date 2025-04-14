@@ -61,7 +61,7 @@ What is one helpful, practical parenting tip or suggestion I can try today that 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
+        model: "gpt-3.5-turbo",
         messages: finalMessages,
       }),
     });
