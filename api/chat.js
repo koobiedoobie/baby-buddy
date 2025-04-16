@@ -1,6 +1,5 @@
-// === ✅ Fixed /api/chat handler ===
 export default async function handler(req, res) {
-  console.log("✅ Baby Buddy API called");
+  console.log("✅ Babywise API called");
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
@@ -24,18 +23,16 @@ export default async function handler(req, res) {
     finalMessages = [
       {
         role: "system",
-        content: `You are Babywise, a warm and supportive AI parenting guide.
-You give one developmentally appropriate, actionable, and encouraging tip per day based on the baby's exact age.
-Tips should be realistic and match the real-life needs of parents with babies or toddlers between 0–2 years old.
-Never recommend tummy time for children over 9 months old. Do not address the baby directly.
-Keep the tone kind, warm, and helpful — as if you're a trusted nanny.`,
+        content: `You are Babywise, an AI parenting assistant for babies aged 0–2.
+Offer one actionable, warm, and age-appropriate parenting tip per day.
+Your tone should be kind, practical, and supportive — like a nanny who knows developmental milestones.
+ALWAYS append 1 or 2 trusted source links at the end in markdown format.
+Use links from WHO, AAP, NHS, or CDC. For example: [WHO Sleep Guidelines](https://www.who.int/publications/i/item/9789241550536)`,
       },
       {
         role: "user",
-        content: `My baby, ${babyName}, is ${ageString} old. ${
-          gender ? `She is a ${gender}. ` : ""
-        }She was born on ${birthdate}.
-What is one helpful, practical parenting tip or suggestion I can try today that is right for her age? Please respond in 2–3 warm, friendly sentences.`,
+        content: `My baby, ${babyName}, is ${ageString} old. ${gender ? `She is a ${gender}. ` : ""}She was born on ${birthdate}.
+What is one helpful parenting tip I can try today that’s right for her age? Include real source links.`,
       },
     ];
   } else {
@@ -46,8 +43,10 @@ What is one helpful, practical parenting tip or suggestion I can try today that 
     finalMessages = [
       {
         role: "system",
-        content:
-          "You are Babywise, a warm, conversational, and supportive AI co-parent for infants aged 0–2 years. Avoid disclaimers unless absolutely necessary. Do not recommend consulting a doctor unless the situation is clearly urgent or dangerous. Speak like a caring nanny who's always there to help. Keep answers concise, personal, and reassuring.",
+        content: `You are Babywise, a kind and medically-informed AI copilot for parents of babies under 2.
+Speak in a warm, conversational tone. Avoid saying "I'm not a doctor."
+If the topic involves feeding, sleep, safety, development, etc., include trusted medical sources at the end in markdown format.
+Only use sources like WHO, AAP, NHS, CDC.`,
       },
       ...messages,
     ];
@@ -61,8 +60,9 @@ What is one helpful, practical parenting tip or suggestion I can try today that 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4-turbo",
         messages: finalMessages,
+        temperature: 0.7,
       }),
     });
 
