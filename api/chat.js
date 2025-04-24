@@ -1,3 +1,7 @@
+import { db } from "../../utils/firebase";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { subDays } from "date-fns";
+
 export default async function handler(req, res) {
   console.log("✅ Babywise API called");
 
@@ -5,48 +9,110 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
-  const { messages, type, babyName, birthdate, gender, ageString } = req.body;
+  const {
+    messages, type, babyId, babyName, birthdate, gender, ageString
+  } = req.body;
   const key = process.env.OPENAI_API_KEY;
 
-  if (!key) {
-    console.error("❌ Missing OpenAI API key in environment variables");
-    return res.status(500).json({ error: "Missing OpenAI API key" });
+  if (!key) return res.status(500).json({ error: "Missing OpenAI API key" });
+
+  let sleepSummary = "No recent sleep logs found.";
+  let foodSummary = "No recent food logs found.";
+
+  try {
+    if (babyId) {
+      const since = subDays(new Date(), 3).toISOString();
+
+      // 💤 Fetch Sleep Logs
+      const sleepQuery = query(
+        collection(db, "babies", babyId, "sleepLogs"),
+        where("start", ">=", since),
+        orderBy("start", "desc")
+      );
+      const sleepSnapshot = await getDocs(sleepQuery);
+      const sleepData = sleepSnapshot.docs.map(doc => doc.data());
+
+      if (sleepData.length) {
+        const grouped = {};
+        sleepData.forEach(log => {
+          const date = new Date(log.start).toDateString();
+          const duration = (new Date(log.end) - new Date(log.start)) / (1000 * 60);
+          if (!grouped[date]) grouped[date] = [];
+          grouped[date].push(duration);
+        });
+
+        sleepSummary = Object.entries(grouped).map(([date, durations]) => {
+          const naps = durations.map(d => `${Math.floor(d / 60)}h ${d % 60}m`).join(", ");
+          return `- ${date}: ${durations.length} naps (${naps})`;
+        }).join("\n");
+      }
+
+      // 🍽 Fetch Food Logs
+      const foodQuery = query(
+        collection(db, "babies", babyId, "foodLogs"),
+        where("timestamp", ">=", since),
+        orderBy("timestamp", "desc")
+      );
+      const foodSnapshot = await getDocs(foodQuery);
+      const foodData = foodSnapshot.docs.map(doc => doc.data());
+
+      if (foodData.length) {
+        foodSummary = foodData.map(log => {
+          const time = new Date(log.timestamp).toLocaleString();
+          const ings = log.ingredients?.map(i => i.name).join(", ") || "no ingredients listed";
+          const note = log.note ? `(${log.note})` : "";
+          return `- ${log.dishName} [${ings}] at ${time} ${note}`;
+        }).join("\n");
+      }
+    }
+  } catch (e) {
+    console.warn("⚠️ Error fetching logs:", e);
   }
 
   let finalMessages = [];
 
   if (type === "tip") {
     if (!babyName || !birthdate || !ageString) {
-      return res.status(400).json({ error: "Missing required baby data for tip request." });
+      return res.status(400).json({ error: "Missing baby data for tip request." });
     }
 
     finalMessages = [
       {
         role: "system",
-        content: `You are Babywise, an AI parenting co-pilot for babies.
-Offer at least one actionable, warm, and age-appropriate (using the date of birth set on the baby profile) parenting tip per day.
-Your tone should be warm, unjudgemental, kind, practical, and supportive — like a nanny who knows developmental milestones.
-If possible, append 1 or 2 trusted source links at the end in markdown format.
-Use links from WHO, AAP, NHS, CDC, or any other credible sources. For example: [WHO Sleep Guidelines](https://www.who.int/publications/i/item/9789241550536)`,
+        content: `You are Babywise, a loving and medically-informed AI parenting co-pilot. Offer personalized parenting tips based on real baby data (sleep, food). Be practical, supportive, kind, and reference sources like WHO or AAP.`,
       },
       {
         role: "user",
-        content: `My baby, ${babyName}, is ${ageString} old. ${gender ? `She is a ${gender}. ` : ""}She was born on ${birthdate}.
-What is one really helpful parenting tip I can try today that’s right for her age? Do not be too general`,
+        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString}).
+
+Recent Sleep:
+${sleepSummary}
+
+Recent Food:
+${foodSummary}
+
+What is a helpful and relevant parenting tip I can try today?`,
       },
     ];
   } else {
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "Messages is required and must be an array" });
+      return res.status(400).json({ error: "Messages must be an array." });
     }
 
     finalMessages = [
       {
         role: "system",
-        content: `You are Babywise, a kind and medically-informed AI copilot for parents of babies.
-Speak in a warm, conversational tone. Avoid saying "I'm not a doctor."
-If the topic involves feeding, sleep, safety, development, etc., include trusted medical sources at the end in markdown format.
-Only use sources like WHO, AAP, NHS, CDC or any other credible source.`,
+        content: `You are Babywise, a warm, medically-informed AI parenting co-pilot. You personalize responses based on baby profiles and recent logs. Avoid disclaimers and give kind, confident guidance.`,
+      },
+      {
+        role: "user",
+        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString}).
+
+Recent Sleep:
+${sleepSummary}
+
+Recent Food:
+${foodSummary}`,
       },
       ...messages,
     ];
@@ -68,17 +134,12 @@ Only use sources like WHO, AAP, NHS, CDC or any other credible source.`,
 
     const data = await response.json();
 
-    if (!data || !data.choices || !data.choices[0]?.message?.content) {
-      console.error("❌ Invalid OpenAI response:", data);
-      return res.status(500).json({ error: "Invalid response from OpenAI", data });
+    if (!data?.choices?.[0]?.message?.content) {
+      return res.status(500).json({ error: "Invalid OpenAI response", data });
     }
 
-    const reply = data.choices[0].message.content.trim();
-    console.log("✅ Reply sent:", reply);
-
-    return res.status(200).json({ reply });
+    return res.status(200).json({ reply: data.choices[0].message.content.trim() });
   } catch (err) {
-    console.error("🔥 Error from OpenAI API:", err);
     return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
 }
