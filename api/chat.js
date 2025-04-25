@@ -10,13 +10,7 @@ export default async function handler(req, res) {
   }
 
   const {
-    messages,
-    type,
-    babyId,
-    babyName,
-    birthdate,
-    gender,
-    ageString
+    messages, type, babyId, babyName, birthdate, gender, ageString
   } = req.body;
 
   const key = process.env.OPENAI_API_KEY;
@@ -29,7 +23,6 @@ export default async function handler(req, res) {
     if (babyId) {
       const since = subDays(new Date(), 3).toISOString();
 
-      // 💤 Fetch Sleep Logs
       const sleepQuery = query(
         collection(db, "babies", babyId, "sleepLogs"),
         where("start", ">=", since),
@@ -53,7 +46,6 @@ export default async function handler(req, res) {
         }).join("\n");
       }
 
-      // 🍽 Fetch Food Logs
       const foodQuery = query(
         collection(db, "babies", babyId, "foodLogs"),
         where("timestamp", ">=", since),
@@ -85,11 +77,11 @@ export default async function handler(req, res) {
     finalMessages = [
       {
         role: "system",
-        content: `You are Babywise, a loving and medically-informed AI parenting co-pilot. Offer personalized parenting tips based on real baby data (sleep, food). Be practical, supportive, kind, and reference sources like WHO or AAP.`,
+        content: `You are Babywise, a warm, evidence-based AI parenting assistant. Offer kind, relevant daily parenting tips based on age and recent baby data (sleep + food). Be concise, practical, and reference sources like WHO or AAP when possible.`,
       },
       {
         role: "user",
-        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString}).
+        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString})
 
 Recent Sleep:
 ${sleepSummary}
@@ -97,7 +89,7 @@ ${sleepSummary}
 Recent Food:
 ${foodSummary}
 
-What is a helpful and relevant parenting tip I can try today?`,
+What is a helpful, medically-informed parenting tip I can try today?`,
       },
     ];
   } else {
@@ -108,11 +100,11 @@ What is a helpful and relevant parenting tip I can try today?`,
     finalMessages = [
       {
         role: "system",
-        content: `You are Babywise, a warm, medically-informed AI parenting co-pilot. You personalize responses based on baby profiles and recent logs. Avoid disclaimers and give kind, confident guidance.`,
+        content: `You are Babywise, a supportive AI parenting guide. Offer personalized, confident, emotionally validating responses based on baby profile and logs.`,
       },
       {
         role: "user",
-        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString}).
+        content: `Baby profile: ${babyName} (${gender || "unspecified"}, born ${birthdate}, age ${ageString})
 
 Recent Sleep:
 ${sleepSummary}
@@ -139,12 +131,15 @@ ${foodSummary}`,
     });
 
     const data = await response.json();
+
     if (!data?.choices?.[0]?.message?.content) {
-      return res.status(500).json({ error: "Invalid OpenAI response", data });
+      console.error("❌ GPT Error:", data);
+      return res.status(500).json({ error: "Invalid GPT response", data });
     }
 
     return res.status(200).json({ reply: data.choices[0].message.content.trim() });
   } catch (err) {
+    console.error("❌ OpenAI request failed:", err);
     return res.status(500).json({ error: "OpenAI call failed", details: err.message });
   }
 }
