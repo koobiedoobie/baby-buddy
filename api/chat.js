@@ -116,6 +116,12 @@ ${foodSummary}`,
     ];
   }
 
+  console.log("🚀 Sending to OpenAI:", JSON.stringify({
+    model: "gpt-4-turbo",
+    messages: finalMessages,
+    temperature: 0.7,
+  }));
+
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -130,10 +136,24 @@ ${foodSummary}`,
       }),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    console.log("📜 Raw GPT Response:", raw);
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.error("❌ Failed to parse GPT JSON:", e);
+      return res.status(500).json({ error: "OpenAI response not JSON", raw });
+    }
+
+    if (!response.ok) {
+      console.error("❌ GPT API error:", data);
+      return res.status(response.status).json({ error: data });
+    }
 
     if (!data?.choices?.[0]?.message?.content) {
-      console.error("❌ GPT Error:", data);
+      console.error("❌ GPT response missing content:", data);
       return res.status(500).json({ error: "Invalid GPT response", data });
     }
 
