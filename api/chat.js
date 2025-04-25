@@ -1,39 +1,18 @@
 export default async function handler(req, res) {
-  console.log("✅ Babywise API (simplified) called");
+  console.log("✅ Babywise API (chat) called");
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed. Use POST." });
   }
 
-  const { type, babyName, birthdate, gender, ageString } = req.body;
-
   const key = process.env.OPENAI_API_KEY;
   if (!key) return res.status(500).json({ error: "Missing OpenAI API key" });
 
-  if (type !== "tip") {
-    return res.status(400).json({ error: "Unsupported request type" });
+  const { messages } = req.body;
+
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: "Missing or invalid 'messages' array" });
   }
-
-  if (!babyName || !birthdate || !ageString) {
-    return res.status(400).json({ error: "Missing baby data for tip request." });
-  }
-
-  const finalMessages = [
-    {
-      role: "system",
-      content: `You are Babywise, a warm and knowledgeable AI parenting assistant. Your job is to provide one helpful, evidence-based, medically-informed tip tailored to a baby’s age. Keep it short, actionable, and emotionally supportive. Cite WHO, AAP, or real best practices if helpful.`,
-    },
-    {
-      role: "user",
-      content: `Baby profile:
-- Name: ${babyName}
-- Gender: ${gender || "unspecified"}
-- Birthdate: ${birthdate}
-- Age: ${ageString}
-
-What is one gentle, helpful tip I can try today?`,
-    },
-  ];
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -43,8 +22,8 @@ What is one gentle, helpful tip I can try today?`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
-        messages: finalMessages,
+        model: "gpt-3.5-turbo",
+        messages,
         temperature: 0.7,
       }),
     });
@@ -69,7 +48,7 @@ What is one gentle, helpful tip I can try today?`,
 
     if (!reply) {
       console.error("❌ GPT response missing content:", data);
-      return res.status(500).json({ error: "No tip returned", data });
+      return res.status(500).json({ error: "No reply returned", data });
     }
 
     return res.status(200).json({ reply });
