@@ -10,10 +10,16 @@ export default async function handler(req, res) {
   }
 
   const {
-    messages, type, babyId, babyName, birthdate, gender, ageString
+    messages,
+    type,
+    babyId,
+    babyName,
+    birthdate,
+    gender,
+    ageString
   } = req.body;
-  const key = process.env.OPENAI_API_KEY;
 
+  const key = process.env.OPENAI_API_KEY;
   if (!key) return res.status(500).json({ error: "Missing OpenAI API key" });
 
   let sleepSummary = "No recent sleep logs found.";
@@ -42,7 +48,7 @@ export default async function handler(req, res) {
         });
 
         sleepSummary = Object.entries(grouped).map(([date, durations]) => {
-          const naps = durations.map(d => `${Math.floor(d / 60)}h ${d % 60}m`).join(", ");
+          const naps = durations.map(d => `${Math.floor(d / 60)}h ${Math.round(d % 60)}m`).join(", ");
           return `- ${date}: ${durations.length} naps (${naps})`;
         }).join("\n");
       }
@@ -133,7 +139,6 @@ ${foodSummary}`,
     });
 
     const data = await response.json();
-
     if (!data?.choices?.[0]?.message?.content) {
       return res.status(500).json({ error: "Invalid OpenAI response", data });
     }
